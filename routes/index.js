@@ -10,8 +10,8 @@ var smtpTransport = MailConfig.SMTPTransport;
 router.get('/email/template', (req, res, next) => {
   MailConfig.ViewOption(gmailTransport,hbs);
   let HelperOptions = {
-    from: '"Tariqul islam" <tariqul.islam.rony@gmail.com>',
-    to: 'tariqul@itconquest.com',
+    from: '"Lexis Hukuk" <contact@lexishukuk.com>',
+    to: 'abidinayhan94@gmail.com',
     subject: 'Hellow world!',
     template: 'test',
     context: {
@@ -34,8 +34,8 @@ router.get('/email/template', (req, res, next) => {
 router.get('/email/smtp/template', (req, res, next) => {
   MailConfig.ViewOption(smtpTransport,hbs);
   let HelperOptions = {
-    from: '"Tariqul islam" <tariqul@falconfitbd.com>',
-    to: 'tariqul.islam.rony@gmail.com',
+    from: '"Lexis Hukuk" <contact@lexishukuk.com>',
+    to: 'abidinayhan94@gmail.com',
     subject: 'Hellow world!',
     template: 'test',
     context: {
