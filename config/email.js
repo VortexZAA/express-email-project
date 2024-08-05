@@ -1,8 +1,10 @@
-let nodemailer = require('nodemailer');
-require('dotenv').config();
+/* let nodemailer = require('nodemailer'); */
+import nodemailer from 'nodemailer';
+/* require('dotenv').config(); */
+import 'dotenv/config.js';
 let environment = process.env;
 
-module.exports.GmailTransport = nodemailer.createTransport({
+export const GmailTransport = nodemailer.createTransport({
     service: environment.GMAIL_SERVICE_NAME,
     host: environment.GMAIL_SERVICE_HOST,
     secure:environment.GMAIL_SERVICE_SECURE,
@@ -13,7 +15,7 @@ module.exports.GmailTransport = nodemailer.createTransport({
     }
 });
 
-module.exports.SMTPTransport = nodemailer.createTransport({
+export const SMTPTransport = nodemailer.createTransport({
     host: environment.SMTP_SERVICE_HOST,
     port: environment.SMTP_SERVICE_PORT,
     secure: environment.SMTP_SERVICE_SECURE, // upgrade later with STARTTLS
@@ -24,7 +26,7 @@ module.exports.SMTPTransport = nodemailer.createTransport({
     }
 });
 
-module.exports.ViewOption = (transport, hbs) => {
+export const ViewOption = (transport, hbs) => {
     transport.use('compile', hbs({
             viewPath: 'views/email',
             extName: '.hbs'
