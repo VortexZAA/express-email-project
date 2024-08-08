@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 /* var express = require('express'); */
 import 'dotenv/config.js';
 let environment = process.env;
@@ -9,30 +10,37 @@ import nodemailer from 'nodemailer';
 import { GmailTransport, SMTPTransport, ViewOption } from '../config/email.js';
 /* var hbs = require('nodemailer-express-handlebars'); */
 import hbs from 'nodemailer-express-handlebars';
-import jwt from 'jsonwebtoken';
 let gmailTransport = GmailTransport;
 var smtpTransport = SMTPTransport;
 const admin = environment.POCKETBASE_ADMIN
 const password = environment.POCKETBASE_PASSWORD
-
+const logo = "https://trial.a-traq.com/atraq-logo.png"
+const otcStoreSMS = {};
+const otcStoreEmail = {};
+const smsUrl = environment.SMS_URL;
 router.get('/email/adduser', async (req, res, next) => {
-  const { token } = req.query;
-  console.log('token', token);
-  const decoded = jwt.decode(token);
-  const id = decoded?.id || decoded?.payload?.id;
+  const { id, name, surname, tel, email, } = req.query;
+  console.log('id', id);
+  let otcEmail, otcSMS;
+  if (id || email) {
+    otcEmail = crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
+    otcStoreEmail[email] = otcEmail;
+    otcSMS = crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
+    otcStoreSMS[tel] = otcSMS;
+  }
   const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
     return data;
   }).catch((error) => {
     return false;
   });
-  console.log('loginAdmin', loginAdmin);
+  //console.log('loginAdmin', loginAdmin);
   const getUser = await pb.collection('users').getOne(id).then((data) => {
     return data;
   }).catch((error) => {
     return false;
   });
-  /* console.log('user', getUser);
-  console.log("decoded", decoded); */
+  console.log('user', getUser);
+  /*console.log("decoded", decoded); */
   const settings = await pb.collection('program_settings').getFullList().then((data) => {
     return data[0];
   }).catch((error) => {
@@ -44,7 +52,7 @@ router.get('/email/adduser', async (req, res, next) => {
     console.log('====================================');
     console.log("oldu", environment.GMAIL_SERVICE_NAME, settings?.smtp, false, settings?.port, settings?.userName, settings?.password);
     console.log('====================================');
-    console.log("settings", settings);
+    //console.log("settings", settings);
     url = pb.files.getUrl(settings, settings?.logoFile);
     console.log("url", url);
     gmailTransport = nodemailer.createTransport({
@@ -57,7 +65,38 @@ router.get('/email/adduser', async (req, res, next) => {
         pass: settings?.password
       }
     });
+    let urlSMS = new URL(smsUrl);
+    urlSMS.search = new URLSearchParams({
+      action: 'sendsms',
+      user: environment.SMS_USER,
+      password: environment.SMS_PASSWORD,
+      from: 'Atraq2',
+      to: tel,
+      text: `Merhaba ${name} ${surname}, Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: ${otcSMS}`
+    }).toString();
+    console.log("urlSMS", urlSMS.href);
+
+    const sendSms = await fetch(urlSMS, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(response => {
+      return true;
+      console.log("response", response);
+
+    }).then(data => {
+      return data;
+    }).catch(error => {
+      console.error('There was a problem with the fetch operation:', error);
+      return false;
+    });
+    console.log('====================================');
+    console.log('sendSms', sendSms);
+    console.log('====================================');
+
   }
+
 
   //console.log(settings);
   ViewOption(gmailTransport, hbs);
@@ -70,8 +109,11 @@ router.get('/email/adduser', async (req, res, next) => {
       fullName: getUser?.name + " " + getUser?.surname,
       name: getUser?.name,
       email: getUser?.email,
-      relationName: 'deneme',
-      img: url
+      relationName: settings?.alarmCenterName,
+      img: url,
+      logo: logo,
+      emailOTC: otcEmail,
+      //text: `<p>Merhaba ${getUser.name} <br /> ${getUser.surname}</p>`//{{{text}}}
     }
   };
   gmailTransport.sendMail(HelperOptions, (error, info) => {
@@ -85,35 +127,39 @@ router.get('/email/adduser', async (req, res, next) => {
   });
 });
 
-/* router.get('/email/smtp/template', (req, res, next) => {
-  MailConfig.ViewOption(smtpTransport, hbs);
-  let HelperOptions = {
-    from: '"Atraq" <alarm@a-traq.com>',
-    to: 'abidinayhan94@gmail.com',
-    subject: 'Hellow world!',
-    template: 'test',
-    context: {
-      name: "tariqul_islam",
-      email: "tariqul.islam.rony@gmail.com",
-      address: "52, Kadamtola Shubag dhaka",
-      img: 'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png'
-    }
-  };
-  smtpTransport.verify((error, success) => {
-    if (error) {
-      res.json({ output: 'error', message: error })
-      res.end();
-    } else {
-      smtpTransport.sendMail(HelperOptions, (error, info) => {
-        if (error) {
-          res.json({ output: 'error', message: error })
-        }
-        res.json({ output: 'success', message: info });
-        res.end();
-      });
-    }
-  })
-
-}); */
+router.get('/email/verify', async (req, res, next) => {
+  const { email, otc } = req.query;
+  console.log('email', email);
+  console.log('otc', otc);
+  if (otcStoreEmail[email] === otc) {
+    res.json({ status: true });
+  } else {
+    res.json({ status: false });
+  }
+});
+// OTC doğrulama
+router.post('/sms/verify', (req, res) => {
+  const { tel, otc } = req.body;
+  console.log('tel', tel);
+  console.log('otc', otc);
+  if (otcStoreSMS[tel] === otc) {
+    res.json({ status: true });
+  } else {
+    res.json({ status: false });
+  }
+});
+// OTC doğrulama
+router.post('/verify', (req, res) => {
+  const { email, tel, otcEmail, otcSms } = req.body;
+  console.log('email', email);
+  console.log('tel', tel);
+  console.log('otcEmail', otcEmail);
+  console.log('otcSms', otcSms);
+  if (otcStoreEmail[email] === otcEmail && otcStoreSMS[tel] === otcSms) {
+    res.json({ status: true });
+  } else {
+    res.json({ status: false });
+  }
+});
 
 export default router;
