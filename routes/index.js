@@ -18,14 +18,41 @@ const logo = "https://trial.a-traq.com/atraq-logo.png"
 const otcStoreSMS = {};
 const otcStoreEmail = {};
 const smsUrl = environment.SMS_URL;
-router.get('/email/adduser', async (req, res, next) => {
-  const { id, name, surname, tel, email, } = req.query;
+function ActionBtn(action, params) {
+  const url = new URL(action);
+  if (params) {
+    url.search = new URLSearchParams({
+      ...params
+    }).toString();
+  }
+  return `<table class="btn btn-primary p-3 fw-700" role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" style="border-radius: 6px; border-collapse: separate !important; font-weight: 700 !important; ">
+                                      <tbody>
+                                        <tr>
+                                          <td style="line-height: 24px; font-size: 16px; border-radius: 6px; font-weight: 700 !important; margin: 0;" align="center" bgcolor="#0d6efd">
+                                            <a href="${action}" style="color: #ffffff; font-size: 16px; font-family: Helvetica, Arial, sans-serif; text-decoration: none; border-radius: 6px; line-height: 20px; display: block; font-weight: 700 !important; white-space: nowrap; background-color: #0d6efd; padding: 12px; border: 1px solid #0d6efd;">Click Here</a>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>`
+}
+function replacePlaceholders(template, variables) {
+  return template.replace(/{(\w+)}/g, function (match, key) {
+    return variables[key] || match;
+  });
+}
+function generateNumericOTC() {
+  return crypto.randomInt(100000, 1000000).toString(); // 100000 ile 999999 arasında bir sayı
+}
+router.get('/email/newuser', async (req, res, next) => {
+  const { id, r_name, r_surname, tel, email, type, test } = req.query;
   console.log('id', id);
   let otcEmail, otcSMS;
+
   if (id || email) {
-    otcEmail = crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
+    // 6 basamak OTC oluştur
+    otcEmail = generateNumericOTC(); //crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
     otcStoreEmail[email] = otcEmail;
-    otcSMS = crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
+    otcSMS = generateNumericOTC(); //crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
     otcStoreSMS[tel] = otcSMS;
   }
   const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
@@ -39,7 +66,20 @@ router.get('/email/adduser', async (req, res, next) => {
   }).catch((error) => {
     return false;
   });
-  console.log('user', getUser);
+  if (!test) {
+    const updatePassword = await pb.collection('users').update(id, {
+      "password": otcEmail,
+      "passwordConfirm": otcEmail,
+    }).then((data) => {
+      return data;
+    }).catch((error) => {
+      return false;
+    });
+    console.log('updatePassword', updatePassword);
+  }
+  
+  
+  //console.log('user', getUser);
   /*console.log("decoded", decoded); */
   const settings = await pb.collection('program_settings').getFullList().then((data) => {
     return data[0];
@@ -65,6 +105,8 @@ router.get('/email/adduser', async (req, res, next) => {
         pass: settings?.password
       }
     });
+    console.log("template_new_user", settings?.email_templates?.[`${type}_subject`], settings?.email_templates?.[`${type}_body`]);
+
     let urlSMS = new URL(smsUrl);
     urlSMS.search = new URLSearchParams({
       action: 'sendsms',
@@ -72,47 +114,77 @@ router.get('/email/adduser', async (req, res, next) => {
       password: environment.SMS_PASSWORD,
       from: 'Atraq2',
       to: tel,
-      text: `Merhaba ${name} ${surname}, Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: ${otcSMS}`
+      text: `Merhaba ${getUser?.name} ${getUser?.surname}, Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: ${otcSMS}`
     }).toString();
-    console.log("urlSMS", urlSMS.href);
+    //console.log("urlSMS", urlSMS.href);
 
-    const sendSms = await fetch(urlSMS, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(response => {
-      return true;
-      console.log("response", response);
-
-    }).then(data => {
-      return data;
-    }).catch(error => {
-      console.error('There was a problem with the fetch operation:', error);
-      return false;
-    });
-    console.log('====================================');
-    console.log('sendSms', sendSms);
-    console.log('====================================');
+    /*  const sendSms = await fetch(urlSMS, {
+       method: 'GET',
+       headers: {
+         'Content-Type': 'application/json'
+       }
+     }).then(response => {
+       return true;
+       console.log("response", response);
+ 
+     }).then(data => {
+       return data;
+     }).catch(error => {
+       console.error('There was a problem with the fetch operation:', error);
+       return false;
+     });
+     console.log('====================================');
+     console.log('sendSms', sendSms);
+     console.log('===================================='); */
 
   }
 
 
   //console.log(settings);
+  const variables = {
+    USER_EMAIL: getUser?.email,
+    USER_NAME: getUser?.name,
+    USER_FULLNAME: getUser?.name + " " + getUser?.surname,
+    R_NAME: r_name,
+    R_SURNAME: r_surname,
+    SITE_NAME: "Atraq",
+    ACTION_BTN: ActionBtn('https://trial.a-traq.com/auth', {}),
+    OTC: otcEmail,
+    APP_NAME: settings?.appName,
+    APP_URL: settings?.appUrl,
+  };
+  console.log("variables", variables);
+
+
+  let subject = settings?.email_templates?.[`${type}_subject`];
+  subject = subject ? subject.replace("{APP_NAME}", settings?.appName) : 'Support'
+  let body = settings?.email_templates?.[`${type}_body`];
+  body = body ? replacePlaceholders(body, variables) : 'error'
+  console.log("body", body);
+
   ViewOption(gmailTransport, hbs);
   let HelperOptions = {
-    from: '"Atraq" <alarm@a-traq.com>',
-    to: getUser?.email + ',' + 'abidinayhan94@gmail.com',
-    subject: 'Hellow world!',
+    from: `${settings?.appName} <${settings?.userName}>`,
+    to: (test && email ? email : getUser?.email )+ ',' + 'abidinayhan94@gmail.excom',
+    subject: subject,
     template: 'test',
     context: {
+      atraqUrl: "https://a-traq.com",
       fullName: getUser?.name + " " + getUser?.surname,
       name: getUser?.name,
       email: getUser?.email,
-      relationName: settings?.alarmCenterName,
+      alarmCenterName: settings?.alarmCenterName,
       img: url,
       logo: logo,
       emailOTC: otcEmail,
+      body: body,
+      address: settings?.alarmCenterAdress,
+      instagram: settings?.alarmCenterInstagram,
+      facebook: settings?.alarmCenterFacebook,
+      twitter: settings?.alarmCenterTwitter,
+      tel: settings?.alarmCenterTelephone,
+      alarmCenterUrl: settings?.alarmCenterUrl,
+      alarmCenterMail: settings?.alarmCenterMail,
       //text: `<p>Merhaba ${getUser.name} <br /> ${getUser.surname}</p>`//{{{text}}}
     }
   };
@@ -126,6 +198,9 @@ router.get('/email/adduser', async (req, res, next) => {
     res.json(info)
   });
 });
+
+
+
 
 router.get('/email/verify', async (req, res, next) => {
   const { email, otc } = req.query;
