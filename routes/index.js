@@ -77,8 +77,8 @@ router.get('/email/newuser', async (req, res, next) => {
     });
     console.log('updatePassword', updatePassword);
   }
-  
-  
+
+
   //console.log('user', getUser);
   /*console.log("decoded", decoded); */
   const settings = await pb.collection('program_settings').getFullList().then((data) => {
@@ -165,7 +165,7 @@ router.get('/email/newuser', async (req, res, next) => {
   ViewOption(gmailTransport, hbs);
   let HelperOptions = {
     from: `${settings?.appName} <${settings?.userName}>`,
-    to: (test && email ? email : getUser?.email )+ ',' + 'abidinayhan94@gmail.excom',
+    to: (test && email ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.excom',
     subject: subject,
     template: 'test',
     context: {
@@ -236,5 +236,8 @@ router.post('/verify', (req, res) => {
     res.json({ status: false });
   }
 });
-
+router.get('/', async (req, res, next) => {
+  res.json({ status: true });
+}
+);
 export default router;
