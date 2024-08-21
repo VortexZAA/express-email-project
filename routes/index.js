@@ -4,7 +4,9 @@ import 'dotenv/config.js';
 let environment = process.env;
 import express from 'express';
 import pb from '../lib/pb.js';
+import cors from "cors";
 var router = express.Router();
+router.use(cors());
 import nodemailer from 'nodemailer';
 /* var MailConfig = require('../config/email'); */
 import { GmailTransport, SMTPTransport, ViewOption } from '../config/email.js';
