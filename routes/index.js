@@ -43,7 +43,7 @@ function replacePlaceholders(template, variables) {
 function generateNumericOTC() {
   return crypto.randomInt(100000, 1000000).toString(); // 100000 ile 999999 arasında bir sayı
 }
-router.get('/email/newuser', async (req, res, next) => {
+router.get('/email/adduser', async (req, res, next) => {
   const { id, r_name, r_surname, tel, email, type, test } = req.query;
   console.log('id', id);
   let otcEmail, otcSMS;
