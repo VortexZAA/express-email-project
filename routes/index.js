@@ -44,7 +44,7 @@ function generateNumericOTC() {
   return crypto.randomInt(100000, 1000000).toString(); // 100000 ile 999999 arasında bir sayı
 }
 router.get('/email/adduser', async (req, res, next) => {
-  const { id, r_name, r_surname, tel, email, type, test } = req.query;
+  const { id, r_name, r_surname, site_name, tel, email, type, test } = req.query;
   console.log('id', id);
   let otcEmail, otcSMS;
 
@@ -147,7 +147,7 @@ router.get('/email/adduser', async (req, res, next) => {
     USER_FULLNAME: getUser?.name + " " + getUser?.surname,
     R_NAME: r_name,
     R_SURNAME: r_surname,
-    SITE_NAME: "Atraq",
+    SITE_NAME:  site_name || "Atraq",
     ACTION_BTN: ActionBtn('https://trial.a-traq.com/auth', {}),
     OTC: otcEmail,
     APP_NAME: settings?.appName,
