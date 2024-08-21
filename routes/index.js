@@ -165,7 +165,7 @@ router.get('/email/adduser', async (req, res, next) => {
   ViewOption(gmailTransport, hbs);
   let HelperOptions = {
     from: `${settings?.appName} <${settings?.userName}>`,
-    to: (test && email ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.excom',
+    to: (test && email ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.com',
     subject: subject,
     template: 'test',
     context: {
