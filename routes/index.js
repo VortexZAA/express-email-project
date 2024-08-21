@@ -191,11 +191,14 @@ router.get('/email/adduser', async (req, res, next) => {
   gmailTransport.sendMail(HelperOptions, (error, info) => {
     if (error) {
       console.log(error);
-      res.json(error);
+      res.json({
+        status: false,
+        error: error
+      });
     }
     console.log("email is send");
     console.log(info);
-    res.json(info)
+    res.json({ info: info, status: true });
   });
 });
 
