@@ -9,11 +9,11 @@ var router = express.Router();
 router.use(cors());
 import nodemailer from 'nodemailer';
 /* var MailConfig = require('../config/email'); */
-import { GmailTransport, SMTPTransport, ViewOption } from '../config/email.js';
+import { GmailTransport, ViewOption } from '../config/email.js';
 /* var hbs = require('nodemailer-express-handlebars'); */
 import hbs from 'nodemailer-express-handlebars';
 let gmailTransport = GmailTransport;
-var smtpTransport = SMTPTransport;
+//var smtpTransport = SMTPTransport;
 const admin = environment.POCKETBASE_ADMIN
 const password = environment.POCKETBASE_PASSWORD
 const logo = "https://trial.a-traq.com/atraq-logo.png"
@@ -46,7 +46,7 @@ function generateNumericOTC() {
   return crypto.randomInt(100000, 1000000).toString(); // 100000 ile 999999 arasında bir sayı
 }
 router.get('/email/adduser', async (req, res, next) => {
-  const { id, r_name, r_surname, site_name, tel, email, type, test } = req.query;
+  const { id, r_name, r_surname, site_name, tel, email, type, test = false } = req.query;
   console.log('id', id);
   let otcEmail, otcSMS;
 
@@ -96,7 +96,7 @@ router.get('/email/adduser', async (req, res, next) => {
     console.log('====================================');
     //console.log("settings", settings);
     url = pb.files.getUrl(settings, settings?.logoFile);
-    console.log("url", url);
+    //console.log("settings", settings);
     gmailTransport = nodemailer.createTransport({
       service: environment.GMAIL_SERVICE_NAME,
       host: settings?.smtp,
@@ -106,8 +106,9 @@ router.get('/email/adduser', async (req, res, next) => {
         user: settings?.userName,
         pass: settings?.password
       }
-    });
-    console.log("template_new_user", settings?.email_templates?.[`${type}_subject`], settings?.email_templates?.[`${type}_body`]);
+    })
+
+    //console.log("template_new_user", settings?.email_templates?.[`${type}_subject`], settings?.email_templates?.[`${type}_body`]);
 
     let urlSMS = new URL(smsUrl);
     urlSMS.search = new URLSearchParams({
@@ -149,20 +150,20 @@ router.get('/email/adduser', async (req, res, next) => {
     USER_FULLNAME: getUser?.name + " " + getUser?.surname,
     R_NAME: r_name,
     R_SURNAME: r_surname,
-    SITE_NAME:  site_name || "Atraq",
+    SITE_NAME: site_name || "Atraq",
     ACTION_BTN: ActionBtn('https://trial.a-traq.com/auth', {}),
     OTC: otcEmail,
     APP_NAME: settings?.appName,
     APP_URL: settings?.appUrl,
   };
-  console.log("variables", variables);
+  //console.log("variables", variables);
 
 
   let subject = settings?.email_templates?.[`${type}_subject`];
   subject = subject ? subject.replace("{APP_NAME}", settings?.appName) : 'Support'
   let body = settings?.email_templates?.[`${type}_body`];
   body = body ? replacePlaceholders(body, variables) : 'error'
-  console.log("body", body);
+  //console.log("body", body);
 
   ViewOption(gmailTransport, hbs);
   let HelperOptions = {
@@ -192,15 +193,21 @@ router.get('/email/adduser', async (req, res, next) => {
   };
   gmailTransport.sendMail(HelperOptions, (error, info) => {
     if (error) {
-      console.log(error);
-      res.json({
+      console.log("error", error);
+      res.status(400).json({
+        error: error,
+        response: error?.response,
         status: false,
-        error: error
       });
+      return;
     }
     console.log("email is send");
     console.log(info);
-    res.json({ info: info, status: true });
+    res.json({
+      info: info,
+      response: info?.response,
+      status: true
+    });
   });
 });
 
