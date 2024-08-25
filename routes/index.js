@@ -37,14 +37,8 @@ function ActionBtn(action, params) {
                                       </tbody>
                                     </table>`
 }
-function replacePlaceholders(template, variables) {
-  return template.replace(/{(\w+)}/g, function (match, key) {
-    return variables[key] || match;
-  });
-}
-function generateNumericOTC() {
-  return crypto.randomInt(100000, 1000000).toString(); // 100000 ile 999999 arasında bir sayı
-}
+
+
 router.get('/email/adduser', async (req, res, next) => {
   const { id, r_name, r_surname, site_name, tel, email, type, test = false } = req.query;
   console.log('id', id);
@@ -168,8 +162,8 @@ router.get('/email/adduser', async (req, res, next) => {
   ViewOption(gmailTransport, hbs);
   let HelperOptions = {
     from: `${settings?.appName} <${settings?.userName}>`,
-    to: (test && email ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.com',
-    subject: subject,
+    to: ((test && email) ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.com',
+    subject: test ? subject + " TEST" : subject,
     template: 'test',
     context: {
       atraqUrl: "https://a-traq.com",
@@ -252,4 +246,12 @@ router.get('/', async (req, res, next) => {
   res.json({ status: true });
 }
 );
+function replacePlaceholders(template, variables) {
+  return template.replace(/{(\w+)}/g, function (match, key) {
+    return variables[key] || match;
+  });
+}
+function generateNumericOTC() {
+  return crypto.randomInt(100000, 1000000).toString(); // 100000 ile 999999 arasında bir sayı
+}
 export default router;
