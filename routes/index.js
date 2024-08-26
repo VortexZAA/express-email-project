@@ -145,7 +145,7 @@ router.get('/email/adduser', async (req, res, next) => {
     R_NAME: r_name,
     R_SURNAME: r_surname,
     SITE_NAME: site_name || "Atraq",
-    ACTION_BTN: ActionBtn('https://trial.a-traq.com/auth', {}),
+    ACTION_BTN: ActionBtn(actionBtnUrl, {}),
     OTC: otcEmail,
     APP_NAME: settings?.appName,
     APP_URL: settings?.appUrl,
@@ -247,6 +247,28 @@ router.get('/', async (req, res, next) => {
   });
 }
 );
+router.get("/checkemail", async (req, res) => {
+  const { email } = req.query;
+  const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
+    return data;
+  }).catch((error) => {
+    return false;
+  });
+  if (loginAdmin) {
+    const check = await pb.collection('users').getFirstListItem(`email="${email}"`).then((data) => {
+      return data;
+    }).catch((error) => {
+      return false;
+    });
+    if (check) {
+      res.json({ status: true, tel: check?.mobileNumber, id: check?.id, email: check?.email });
+    } else {
+      res.status(400).json({ status: false });
+    }
+  } else {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 function replacePlaceholders(template, variables) {
   return template.replace(/{(\w+)}/g, function (match, key) {
     return variables[key] || match;
