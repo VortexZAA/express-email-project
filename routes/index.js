@@ -40,7 +40,7 @@ function ActionBtn(action, params) {
 
 
 router.get('/email/adduser', async (req, res, next) => {
-  const { id, r_name, r_surname, site_name, tel, email, type, test = false, actionBtnUrl = "https://trial.a-traq.com/signup" } = req.query;
+  const { id, r_name, r_surname, site_name, tel, email, type, test = false, actionBtnUrl = "https://trial.a-traq.com/login" } = req.query;
   console.log('id', id);
   let otcEmail, otcSMS;
 
