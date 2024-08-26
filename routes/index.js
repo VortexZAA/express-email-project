@@ -247,7 +247,7 @@ router.get('/', async (req, res, next) => {
   });
 }
 );
-router.get("/checkemail", async (req, res) => {
+router.get("/email/check", async (req, res) => {
   const { email } = req.query;
   const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
     return data;
