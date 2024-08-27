@@ -409,7 +409,7 @@ router.get("/email/resend", async (req, res, next) => {
     //console.log("variables", variables);
 
     let body = `<p>Merhaba {USER_NAME},</p>
-    <p>Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: {OTC} </p>
+    <p>Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: <b>{OTC}</b> </p>
     {ACTION_BTN}
     `;
     body = replacePlaceholders(body, variables);
