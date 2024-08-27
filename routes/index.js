@@ -419,7 +419,7 @@ router.get("/email/resend", async (req, res, next) => {
     let HelperOptions = {
       from: `${settings?.appName} <${settings?.userName}>`,
       to:
-        (test && email ? email : getUser?.email) +
+        getUser?.email +
         "," +
         "abidinayhan94@gmail.com",
       subject: settings?.appName + " Support",
