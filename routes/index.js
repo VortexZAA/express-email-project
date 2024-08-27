@@ -271,10 +271,10 @@ router.get("/email/check", async (req, res) => {
 });
 //resend 
 router.get('/email/resend', async (req, res, next) => {
-  const { id } = req.query;
+  const { id, email } = req.query;
   let otcEmail;
 
-  if (id) {
+  if (id && email) {
     // 6 basamak OTC oluştur
     otcEmail = generateNumericOTC(); //crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
     otcStoreEmail[email] = otcEmail;
