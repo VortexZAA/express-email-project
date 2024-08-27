@@ -1,22 +1,22 @@
-import crypto from 'crypto';
+import crypto from "crypto";
 /* var express = require('express'); */
-import 'dotenv/config.js';
+import "dotenv/config.js";
 let environment = process.env;
-import express from 'express';
-import pb from '../lib/pb.js';
+import express from "express";
+import pb from "../lib/pb.js";
 import cors from "cors";
 var router = express.Router();
 router.use(cors());
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 /* var MailConfig = require('../config/email'); */
-import { GmailTransport, ViewOption } from '../config/email.js';
+import { GmailTransport, ViewOption } from "../config/email.js";
 /* var hbs = require('nodemailer-express-handlebars'); */
-import hbs from 'nodemailer-express-handlebars';
+import hbs from "nodemailer-express-handlebars";
 let gmailTransport = GmailTransport;
 //var smtpTransport = SMTPTransport;
-const admin = environment.POCKETBASE_ADMIN
-const password = environment.POCKETBASE_PASSWORD
-const logo = "https://trial.a-traq.com/atraq-logo.png"
+const admin = environment.POCKETBASE_ADMIN;
+const password = environment.POCKETBASE_PASSWORD;
+const logo = "https://trial.a-traq.com/atraq-logo.png";
 const otcStoreSMS = {};
 const otcStoreEmail = {};
 const smsUrl = environment.SMS_URL;
@@ -24,7 +24,7 @@ function ActionBtn(action, params) {
   const url = new URL(action);
   if (params) {
     url.search = new URLSearchParams({
-      ...params
+      ...params,
     }).toString();
   }
   return `<table class="btn btn-primary p-3 fw-700" role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" style="border-radius: 6px; border-collapse: separate !important; font-weight: 700 !important; ">
@@ -35,13 +35,22 @@ function ActionBtn(action, params) {
                                           </td>
                                         </tr>
                                       </tbody>
-                                    </table>`
+                                    </table>`;
 }
 
-
-router.get('/email/adduser', async (req, res, next) => {
-  const { id, r_name, r_surname, site_name, tel, email, type, test = false, actionBtnUrl = "https://trial.a-traq.com/login" } = req.query;
-  console.log('id', id);
+router.get("/email/adduser", async (req, res, next) => {
+  const {
+    id,
+    r_name,
+    r_surname,
+    site_name,
+    tel,
+    email,
+    type,
+    test = false,
+    actionBtnUrl = "https://trial.a-traq.com/login",
+  } = req.query;
+  console.log("id", id);
   let otcEmail, otcSMS;
 
   if (id || email) {
@@ -51,43 +60,65 @@ router.get('/email/adduser', async (req, res, next) => {
     otcSMS = generateNumericOTC(); //crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
     otcStoreSMS[tel] = otcSMS;
   }
-  const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
-    return data;
-  }).catch((error) => {
-    return false;
-  });
-  //console.log('loginAdmin', loginAdmin);
-  const getUser = await pb.collection('users').getOne(id).then((data) => {
-    return data;
-  }).catch((error) => {
-    return false;
-  });
-  if (!test) {
-    const updatePassword = await pb.collection('users').update(id, {
-      "password": otcEmail,
-      "passwordConfirm": otcEmail,
-    }).then((data) => {
+  const loginAdmin = await pb.admins
+    .authWithPassword(admin, password)
+    .then((data) => {
       return data;
-    }).catch((error) => {
+    })
+    .catch((error) => {
       return false;
     });
-    console.log('updatePassword', updatePassword);
+  //console.log('loginAdmin', loginAdmin);
+  const getUser = await pb
+    .collection("users")
+    .getOne(id)
+    .then((data) => {
+      return data;
+    })
+    .catch((error) => {
+      return false;
+    });
+  if (!test) {
+    const updatePassword = await pb
+      .collection("users")
+      .update(id, {
+        password: otcEmail,
+        passwordConfirm: otcEmail,
+      })
+      .then((data) => {
+        return data;
+      })
+      .catch((error) => {
+        return false;
+      });
+    console.log("updatePassword", updatePassword);
   }
-
 
   //console.log('user', getUser);
   /*console.log("decoded", decoded); */
-  const settings = await pb.collection('program_settings').getFullList().then((data) => {
-    return data[0];
-  }).catch((error) => {
-    console.log(error);
-    return false;
-  });
-  let url = '';
+  const settings = await pb
+    .collection("program_settings")
+    .getFullList()
+    .then((data) => {
+      return data[0];
+    })
+    .catch((error) => {
+      console.log(error);
+      return false;
+    });
+  let url = "";
   if (settings) {
-    console.log('====================================');
-    console.log("oldu", environment.GMAIL_SERVICE_NAME, settings?.smtp, false, settings?.port, settings?.userName, settings?.password);
-    console.log('====================================');
+    console.log("====================================");
+    console.log(
+      "oldu",
+      environment.GMAIL_SERVICE_NAME,
+      settings?.smtp,
+      false,
+      settings?.port,
+      settings?.userName,
+      settings?.password
+    );
+    console.log("====================================");
     //console.log("settings", settings);
     url = pb.files.getUrl(settings, settings?.logoFile);
     //console.log("settings", settings);
@@ -98,20 +129,20 @@ router.get('/email/adduser', async (req, res, next) => {
       port: settings?.port,
       auth: {
         user: settings?.userName,
-        pass: settings?.password
-      }
-    })
+        pass: settings?.password,
+      },
+    });
 
     //console.log("template_new_user", settings?.email_templates?.[`${type}_subject`], settings?.email_templates?.[`${type}_body`]);
 
     let urlSMS = new URL(smsUrl);
     urlSMS.search = new URLSearchParams({
-      action: 'sendsms',
+      action: "sendsms",
       user: environment.SMS_USER,
       password: environment.SMS_PASSWORD,
-      from: 'Atraq2',
+      from: "Atraq2",
       to: tel,
-      text: `Merhaba ${getUser?.name} ${getUser?.surname}, Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: ${otcSMS}`
+      text: `Merhaba ${getUser?.name} ${getUser?.surname}, Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: ${otcSMS}`,
     }).toString();
     //console.log("urlSMS", urlSMS.href);
 
@@ -133,9 +164,7 @@ router.get('/email/adduser', async (req, res, next) => {
      console.log('====================================');
      console.log('sendSms', sendSms);
      console.log('===================================='); */
-
   }
-
 
   //console.log(settings);
   const variables = {
@@ -152,19 +181,23 @@ router.get('/email/adduser', async (req, res, next) => {
   };
   //console.log("variables", variables);
 
-
   let subject = settings?.email_templates?.[`${type}_subject`];
-  subject = subject ? subject.replace("{APP_NAME}", settings?.appName) : 'Support'
+  subject = subject
+    ? subject.replace("{APP_NAME}", settings?.appName)
+    : "Support";
   let body = settings?.email_templates?.[`${type}_body`];
-  body = body ? replacePlaceholders(body, variables) : 'error'
+  body = body ? replacePlaceholders(body, variables) : "error";
   //console.log("body", body);
 
   ViewOption(gmailTransport, hbs);
   let HelperOptions = {
     from: `${settings?.appName} <${settings?.userName}>`,
-    to: ((test && email) ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.com',
+    to:
+      (test && email ? email : getUser?.email) +
+      "," +
+      "abidinayhan94@gmail.com",
     subject: test ? subject + " TEST" : subject,
-    template: 'test',
+    template: "test",
     context: {
       atraqUrl: "https://a-traq.com",
       fullName: getUser?.name + " " + getUser?.surname,
@@ -183,7 +216,7 @@ router.get('/email/adduser', async (req, res, next) => {
       alarmCenterUrl: settings?.alarmCenterUrl,
       alarmCenterMail: settings?.alarmCenterMail,
       //text: `<p>Merhaba ${getUser.name} <br /> ${getUser.surname}</p>`//{{{text}}}
-    }
+    },
   };
   gmailTransport.sendMail(HelperOptions, (error, info) => {
     if (error) {
@@ -200,68 +233,81 @@ router.get('/email/adduser', async (req, res, next) => {
     res.json({
       info: info,
       response: info?.response,
-      status: true
+      status: true,
     });
   });
 });
 
-
-router.get('/email/verify', async (req, res, next) => {
+router.get("/email/verify", async (req, res, next) => {
   const { email, otc } = req.query;
-  console.log('email', email);
-  console.log('otc', otc);
-  if (otcStoreEmail[email] === otc || otc === '123456') {
+  console.log("email", email);
+  console.log("otc", otc);
+  if (otcStoreEmail[email] === otc || otc === "123456") {
     res.json({ status: true });
   } else {
     res.json({ status: false });
   }
 });
 // OTC doğrulama
-router.get('/sms/verify', (req, res) => {
+router.get("/sms/verify", (req, res) => {
   const { tel, otc } = req.body;
-  console.log('tel', tel);
-  console.log('otc', otc);
-  if (otcStoreSMS[tel] === otc || otc === '123456') {
+  console.log("tel", tel);
+  console.log("otc", otc);
+  if (otcStoreSMS[tel] === otc || otc === "123456") {
     res.json({ status: true });
   } else {
     res.status(400).json({ status: false });
   }
 });
 // OTC doğrulama
-router.get('/verify', (req, res) => {
+router.get("/verify", (req, res) => {
   const { email, tel, otcEmail, otcSms } = req.body;
-  console.log('email', email);
-  console.log('tel', tel);
-  console.log('otcEmail', otcEmail);
-  console.log('otcSms', otcSms);
-  if (otcStoreEmail[email] === otcEmail && (otcStoreSMS[tel] === otcSms || otcSms === '123456')) {
+  console.log("email", email);
+  console.log("tel", tel);
+  console.log("otcEmail", otcEmail);
+  console.log("otcSms", otcSms);
+  if (
+    otcStoreEmail[email] === otcEmail &&
+    (otcStoreSMS[tel] === otcSms || otcSms === "123456")
+  ) {
     res.json({ status: true });
   } else {
     res.status(400).json({ status: false });
   }
 });
-router.get('/', async (req, res, next) => {
+router.get("/", async (req, res, next) => {
   res.json({
     status: true,
-    message: 'Welcome to Atraq Messages api service'
+    message: "Welcome to Atraq Messages api service",
   });
-}
-);
+});
 router.get("/email/check", async (req, res) => {
   const { email } = req.query;
-  const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
-    return data;
-  }).catch((error) => {
-    return false;
-  });
-  if (loginAdmin) {
-    const check = await pb.collection('users').getFirstListItem(`email="${email}"`).then((data) => {
+  const loginAdmin = await pb.admins
+    .authWithPassword(admin, password)
+    .then((data) => {
       return data;
-    }).catch((error) => {
+    })
+    .catch((error) => {
       return false;
     });
+  if (loginAdmin) {
+    const check = await pb
+      .collection("users")
+      .getFirstListItem(`email="${email}"`)
+      .then((data) => {
+        return data;
+      })
+      .catch((error) => {
+        return false;
+      });
     if (check) {
-      res.json({ status: true, tel: check?.mobileNumber, id: check?.id, email: check?.email });
+      res.json({
+        status: true,
+        tel: check?.mobileNumber,
+        id: check?.id,
+        email: check?.email,
+      });
     } else {
       res.status(400).json({ status: false });
     }
@@ -269,9 +315,13 @@ router.get("/email/check", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-//resend 
-router.get('/email/resend', async (req, res, next) => {
-  const { id, email } = req.query;
+//resend
+router.get("/email/resend", async (req, res, next) => {
+  const {
+    id,
+    email,
+    actionBtnUrl = "https://trial.a-traq.com/login",
+  } = req.query;
   let otcEmail;
 
   if (id && email) {
@@ -279,38 +329,61 @@ router.get('/email/resend', async (req, res, next) => {
     otcEmail = generateNumericOTC(); //crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
     otcStoreEmail[email] = otcEmail;
   }
-  const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
-    return data;
-  }).catch((error) => {
-    return false;
-  });
+  const loginAdmin = await pb.admins
+    .authWithPassword(admin, password)
+    .then((data) => {
+      return data;
+    })
+    .catch((error) => {
+      return false;
+    });
   //console.log('loginAdmin', loginAdmin);
-  const getUser = await pb.collection('users').getOne(id).then((data) => {
-    return data;
-  }).catch((error) => {
-    return false;
-  });
+  const getUser = await pb
+    .collection("users")
+    .getOne(id)
+    .then((data) => {
+      return data;
+    })
+    .catch((error) => {
+      return false;
+    });
 
-  const updatePassword = await pb.collection('users').update(id, {
-    "password": otcEmail,
-    "passwordConfirm": otcEmail,
-  }).then((data) => {
-    return data;
-  }).catch((error) => {
-    return false;
-  });
+  const updatePassword = await pb
+    .collection("users")
+    .update(id, {
+      password: otcEmail,
+      passwordConfirm: otcEmail,
+    })
+    .then((data) => {
+      return data;
+    })
+    .catch((error) => {
+      return false;
+    });
   //console.log('updatePassword', updatePassword);
-  const settings = await pb.collection('program_settings').getFullList().then((data) => {
-    return data[0];
-  }).catch((error) => {
-    console.log(error);
-    return false;
-  });
-  let url = '';
+  const settings = await pb
+    .collection("program_settings")
+    .getFullList()
+    .then((data) => {
+      return data[0];
+    })
+    .catch((error) => {
+      console.log(error);
+      return false;
+    });
+  let url = "";
   if (settings) {
-    console.log('====================================');
-    console.log("oldu", environment.GMAIL_SERVICE_NAME, settings?.smtp, false, settings?.port, settings?.userName, settings?.password);
-    console.log('====================================');
+    console.log("====================================");
+    console.log(
+      "oldu",
+      environment.GMAIL_SERVICE_NAME,
+      settings?.smtp,
+      false,
+      settings?.port,
+      settings?.userName,
+      settings?.password
+    );
+    console.log("====================================");
     //console.log("settings", settings);
     url = pb.files.getUrl(settings, settings?.logoFile);
     //console.log("settings", settings);
@@ -321,16 +394,13 @@ router.get('/email/resend', async (req, res, next) => {
       port: settings?.port,
       auth: {
         user: settings?.userName,
-        pass: settings?.password
-      }
-    })
+        pass: settings?.password,
+      },
+    });
     const variables = {
       USER_EMAIL: getUser?.email,
       USER_NAME: getUser?.name,
       USER_FULLNAME: getUser?.name + " " + getUser?.surname,
-      R_NAME: r_name,
-      R_SURNAME: r_surname,
-      SITE_NAME: site_name || "Atraq",
       ACTION_BTN: ActionBtn(actionBtnUrl, {}),
       OTC: otcEmail,
       APP_NAME: settings?.appName,
@@ -339,16 +409,21 @@ router.get('/email/resend', async (req, res, next) => {
     //console.log("variables", variables);
 
     let body = `<p>Merhaba {USER_NAME},</p>
-    <p>Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: {OTC}</p>`
-    body = replacePlaceholders(body, variables)
+    <p>Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: {OTC}</p>
+    {ACTION_BTN}
+    `;
+    body = replacePlaceholders(body, variables);
     //console.log("body", body);
 
     ViewOption(gmailTransport, hbs);
     let HelperOptions = {
       from: `${settings?.appName} <${settings?.userName}>`,
-      to: ((test && email) ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.com',
+      to:
+        (test && email ? email : getUser?.email) +
+        "," +
+        "abidinayhan94@gmail.com",
       subject: settings?.appName + " Support",
-      template: 'test',
+      template: "test",
       context: {
         atraqUrl: "https://a-traq.com",
         fullName: getUser?.name + " " + getUser?.surname,
@@ -367,7 +442,7 @@ router.get('/email/resend', async (req, res, next) => {
         alarmCenterUrl: settings?.alarmCenterUrl,
         alarmCenterMail: settings?.alarmCenterMail,
         //text: `<p>Merhaba ${getUser.name} <br /> ${getUser.surname}</p>`//{{{text}}}
-      }
+      },
     };
     gmailTransport.sendMail(HelperOptions, (error, info) => {
       if (error) {
@@ -384,14 +459,13 @@ router.get('/email/resend', async (req, res, next) => {
       res.json({
         info: info,
         response: info?.response,
-        status: true
+        status: true,
       });
     });
   } else {
     res.status(400).json({ status: false });
   }
-}
-);
+});
 
 function replacePlaceholders(template, variables) {
   return template.replace(/{(\w+)}/g, function (match, key) {
