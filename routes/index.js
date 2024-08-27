@@ -269,6 +269,130 @@ router.get("/email/check", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+//resend 
+router.get('/email/resend', async (req, res, next) => {
+  const { id } = req.query;
+  let otcEmail;
+
+  if (id) {
+    // 6 basamak OTC oluştur
+    otcEmail = generateNumericOTC(); //crypto.randomBytes(3).toString('hex'); // 6 karakterli bir OTC oluşturur
+    otcStoreEmail[email] = otcEmail;
+  }
+  const loginAdmin = await pb.admins.authWithPassword(admin, password).then((data) => {
+    return data;
+  }).catch((error) => {
+    return false;
+  });
+  //console.log('loginAdmin', loginAdmin);
+  const getUser = await pb.collection('users').getOne(id).then((data) => {
+    return data;
+  }).catch((error) => {
+    return false;
+  });
+
+  const updatePassword = await pb.collection('users').update(id, {
+    "password": otcEmail,
+    "passwordConfirm": otcEmail,
+  }).then((data) => {
+    return data;
+  }).catch((error) => {
+    return false;
+  });
+  //console.log('updatePassword', updatePassword);
+  const settings = await pb.collection('program_settings').getFullList().then((data) => {
+    return data[0];
+  }).catch((error) => {
+    console.log(error);
+    return false;
+  });
+  let url = '';
+  if (settings) {
+    console.log('====================================');
+    console.log("oldu", environment.GMAIL_SERVICE_NAME, settings?.smtp, false, settings?.port, settings?.userName, settings?.password);
+    console.log('====================================');
+    //console.log("settings", settings);
+    url = pb.files.getUrl(settings, settings?.logoFile);
+    //console.log("settings", settings);
+    gmailTransport = nodemailer.createTransport({
+      service: environment.GMAIL_SERVICE_NAME,
+      host: settings?.smtp,
+      secure: false,
+      port: settings?.port,
+      auth: {
+        user: settings?.userName,
+        pass: settings?.password
+      }
+    })
+    const variables = {
+      USER_EMAIL: getUser?.email,
+      USER_NAME: getUser?.name,
+      USER_FULLNAME: getUser?.name + " " + getUser?.surname,
+      R_NAME: r_name,
+      R_SURNAME: r_surname,
+      SITE_NAME: site_name || "Atraq",
+      ACTION_BTN: ActionBtn(actionBtnUrl, {}),
+      OTC: otcEmail,
+      APP_NAME: settings?.appName,
+      APP_URL: settings?.appUrl,
+    };
+    //console.log("variables", variables);
+
+    let body = `<p>Merhaba {USER_NAME},</p>
+    <p>Atraq uygulamasına hoşgeldiniz. Doğrulama kodunuz: {OTC}</p>`
+    body = replacePlaceholders(body, variables)
+    //console.log("body", body);
+
+    ViewOption(gmailTransport, hbs);
+    let HelperOptions = {
+      from: `${settings?.appName} <${settings?.userName}>`,
+      to: ((test && email) ? email : getUser?.email) + ',' + 'abidinayhan94@gmail.com',
+      subject: settings?.appName + " Support",
+      template: 'test',
+      context: {
+        atraqUrl: "https://a-traq.com",
+        fullName: getUser?.name + " " + getUser?.surname,
+        name: getUser?.name,
+        email: getUser?.email,
+        alarmCenterName: settings?.alarmCenterName,
+        img: url,
+        logo: logo,
+        emailOTC: otcEmail,
+        body: body,
+        address: settings?.alarmCenterAdress,
+        instagram: settings?.alarmCenterInstagram,
+        facebook: settings?.alarmCenterFacebook,
+        twitter: settings?.alarmCenterTwitter,
+        tel: settings?.alarmCenterTelephone,
+        alarmCenterUrl: settings?.alarmCenterUrl,
+        alarmCenterMail: settings?.alarmCenterMail,
+        //text: `<p>Merhaba ${getUser.name} <br /> ${getUser.surname}</p>`//{{{text}}}
+      }
+    };
+    gmailTransport.sendMail(HelperOptions, (error, info) => {
+      if (error) {
+        console.log("error", error);
+        res.status(400).json({
+          error: error,
+          response: error?.response,
+          status: false,
+        });
+        return;
+      }
+      console.log("email is send");
+      console.log(info);
+      res.json({
+        info: info,
+        response: info?.response,
+        status: true
+      });
+    });
+  } else {
+    res.status(400).json({ status: false });
+  }
+}
+);
+
 function replacePlaceholders(template, variables) {
   return template.replace(/{(\w+)}/g, function (match, key) {
     return variables[key] || match;
